@@ -1,0 +1,830 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>لوحة تحكم - One Sport Tv</title>
+    <link rel="stylesheet" href="https://cdn.plyr.io/3.7.8/plyr.css" />
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            text-align: center;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            width: 90%;
+            max-width: 600px;
+            margin: 20px auto;
+            background: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+        }
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .section-title {
+            font-size: 1.5em;
+            font-weight: bold;
+        }
+        .add-section-btn, .add-channel-btn, .edit-section-btn, .delete-section-btn {
+            padding: 8px 12px;
+            cursor: pointer;
+            border: none;
+            border-radius: 5px;
+            color: white;
+            margin-left: 5px;
+        }
+        .add-section-btn, .add-channel-btn { background: #28a745; }
+        .edit-section-btn { background: #007bff; }
+        .delete-section-btn { background: #dc3545; }
+        .channels-list {
+            max-height: 60vh;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+        .channel {
+            padding: 10px;
+            border-bottom: 1px solid #ddd;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        img {
+            width: 50px;
+            height: 50px;
+            border-radius: 5px;
+        }
+        .watch-btn, .edit-btn, .delete-btn {
+            padding: 5px 10px;
+            cursor: pointer;
+            border: none;
+            border-radius: 5px;
+            color: white;
+            margin-left: 5px;
+        }
+        .watch-btn { background: #28a745; }
+        .edit-btn { background: #007bff; }
+        .delete-btn { background: #dc3545; }
+        .player-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            display: none;
+            z-index: 9999;
+        }
+        #player {
+            width: 100%;
+            height: 100%;
+            object-fit: fill;
+        }
+        .server-selection {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            flex-wrap: nowrap;
+            gap: 8px;
+            z-index: 10000;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 8px;
+            border-radius: 10px;
+            overflow-x: auto;
+            white-space: nowrap;
+            max-width: 90%;
+        }
+        .server-btn {
+            background: linear-gradient(to right, #007bff, #00d4ff);
+            color: white;
+            padding: 6px 12px;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: background 0.3s, transform 0.2s;
+        }
+        .server-btn.active {
+            background: linear-gradient(to right, #28a745, #38c172);
+            transform: scale(1.1);
+        }
+        .server-btn:hover {
+            background: linear-gradient(to right, #0056b3, #0096cc);
+        }
+        .server-selection::-webkit-scrollbar {
+            display: none;
+        }
+        .server-selection {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        .close-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: #dc3545;
+            color: white;
+            padding: 8px 12px;
+            cursor: pointer;
+            z-index: 10001;
+            border: none;
+            border-radius: 5px;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 10000;
+        }
+        .modal-content {
+            background: #fff;
+            width: 80%;
+            max-width: 500px;
+            margin: 50px auto;
+            padding: 20px;
+            border-radius: 10px;
+            overflow-y: auto;
+            max-height: 80vh;
+        }
+        select, input {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .add-btn, .cancel-btn {
+            padding: 8px 12px;
+            cursor: pointer;
+            border: none;
+            border-radius: 5px;
+            color: white;
+            margin: 5px;
+        }
+        .add-btn { background: #28a745; }
+        .cancel-btn { background: #6c757d; }
+        .error-message {
+            color: red;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>لوحة تحكم - Amine Tv</h2>
+        <div id="sectionsList"></div>
+    </div>
+
+    <div class="player-container" id="playerContainer">
+        <div class="server-selection" id="serverSelection"></div>
+        <button class="close-btn" onclick="closePlayer()">⛔ إغلاق</button>
+        <video id="player" playsinline controls></video>
+    </div>
+
+    <div class="modal" id="sectionModal">
+        <div class="modal-content">
+            <h3 id="sectionModalTitle">إضافة قسم</h3>
+            <input type="text" id="sectionName" placeholder="اسم القسم">
+            <input type="text" id="sectionImage" placeholder="رابط صورة القسم">
+            <button class="add-btn" onclick="saveSection()">حفظ</button>
+            <button class="cancel-btn" onclick="closeSectionModal()">إلغاء</button>
+        </div>
+    </div>
+
+    <div class="modal" id="channelModal">
+        <div class="modal-content">
+            <h3 id="channelModalTitle">إضافة قناة</h3>
+            <select id="channelCategory">
+                <option value="">اختر القسم</option>
+            </select>
+            <input type="text" id="channelName" placeholder="اسم القناة">
+            <input type="text" id="channelLogo" placeholder="رابط الشعار">
+            <input type="text" id="channelUrl" placeholder="رابط السيرفر الأساسي">
+            <input type="text" id="hdUrl" placeholder="رابط السيرفر HD">
+            <input type="text" id="sdUrl" placeholder="رابط السيرفر SD">
+            <input type="text" id="lowUrl" placeholder="رابط السيرفر Low">
+            <input type="text" id="backup1Url" placeholder="رابط السيرفر الاحتياطي 1 (اختياري)">
+            <input type="text" id="backup2Url" placeholder="رابط السيرفر الاحتياطي 2 (اختياري)">
+            <button class="add-btn" onclick="saveChannel()">حفظ</button>
+            <button class="cancel-btn" onclick="closeChannelModal()">إلغاء</button>
+        </div>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <script src="https://cdn.plyr.io/3.7.8/plyr.js"></script>
+    <script src="https://cdn.dashjs.org/latest/dash.all.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flv.js@latest/dist/flv.min.js"></script>
+    <script>
+        const firebaseConfig = {
+  apiKey: "AIzaSyARzpeY20p5R1RXGYX_83zQkyLHywp-SE4",
+  authDomain: "one-sport-67e48.firebaseapp.com",
+  databaseURL: "https://one-sport-67e48-default-rtdb.asia-southeast1.firebasedatabase.app/",
+  projectId: "one-sport-67e48",
+  storageBucket: "one-sport-67e48.firebasestorage.app",
+  messagingSenderId: "238395812570",
+  appId: "1:238395812570:web:6361f8ecac34d1061fd3e3"
+};
+
+try {
+  firebase.initializeApp(firebaseConfig);
+  console.log('Firebase initialized successfully');
+} catch (err) {
+  console.error('Error initializing Firebase:', err);
+}
+
+        const db = firebase.database();
+        const categoriesRef = db.ref('categories');
+        const channelsRef = db.ref('channels');
+
+        const playerContainer = document.getElementById('playerContainer');
+        const videoElement = document.getElementById('player');
+        let player, dashPlayer, flvPlayer;
+        let isPlayerOpen = false;
+        let allChannels = [];
+        let allCategories = [];
+        let currentServer = 'url';
+        let currentChannelServers = {};
+        let currentChannelId = null;
+        let currentCategoryId = null;
+
+        window.addEventListener('load', () => {
+            console.log('Window loaded, initializing player and loading categories');
+            initializePlayer();
+            loadCategories();
+            setupBackButtonHandler();
+            ensureDefaultCategory();
+        });
+
+        function initializePlayer() {
+            try {
+                player = new Plyr('#player', {
+                    controls: ['play', 'progress', 'current-time', 'mute', 'volume', 'fullscreen'],
+                    autoplay: true,
+                    playsinline: true
+                });
+                player.on('exitfullscreen', () => closePlayer());
+                console.log('Player initialized successfully');
+            } catch (err) {
+                console.error('Error initializing Plyr:', err);
+            }
+        }
+
+        async function ensureDefaultCategory() {
+            try {
+                const snapshot = await categoriesRef.child('channels').once('value');
+                if (!snapshot.exists()) {
+                    console.log('Creating default category: القنوات');
+                    await categoriesRef.child('channels').set({
+                        name: 'القنوات',
+                        image: 'https://via.placeholder.com/150'
+                    });
+                }
+            } catch (err) {
+                console.error('Error ensuring default category:', err);
+                document.getElementById('sectionsList').innerHTML = '<p class="error-message">خطأ في إنشاء القسم الافتراضي</p>';
+            }
+        }
+
+        async function loadCategories() {
+            const sectionsList = document.getElementById('sectionsList');
+            sectionsList.innerHTML = '<p>جارٍ التحميل...</p>';
+
+            try {
+                console.log('Fetching categories and channels from Firebase');
+                const catSnapshot = await categoriesRef.once('value');
+                const chanSnapshot = await channelsRef.once('value');
+                allCategories = [];
+                allChannels = [];
+                sectionsList.innerHTML = '';
+
+                if (catSnapshot.exists()) {
+                    catSnapshot.forEach(child => {
+                        const data = child.val();
+                        data.id = child.key;
+                        allCategories.push(data);
+                    });
+                    console.log('Categories loaded:', allCategories);
+                } else {
+                    console.log('No categories found');
+                }
+
+                if (chanSnapshot.exists()) {
+                    chanSnapshot.forEach(child => {
+                        const data = child.val();
+                        data.id = child.key;
+                        allChannels.push(data);
+                    });
+                    console.log('Channels loaded:', allChannels);
+                } else {
+                    console.log('No channels found');
+                }
+
+                if (allCategories.length === 0) {
+                    sectionsList.innerHTML = '<p>لا توجد أقسام متاحة. أضف قسمًا جديدًا.</p>';
+                } else {
+                    allCategories.forEach(category => {
+                        const sectionDiv = document.createElement('div');
+                        sectionDiv.className = 'section';
+                        sectionDiv.innerHTML = `
+                            <div class="section-header">
+                                <span class="section-title">${category.name}</span>
+                                <div>
+                                    <button class="add-channel-btn" onclick="openAddChannelModal('${category.id}')">➕ إضافة قناة</button>
+                                    <button class="edit-section-btn" onclick="editSection('${category.id}', '${category.name}', '${category.image}')">✏️ تعديل</button>
+                                    ${category.id !== 'channels' ? `<button class="delete-section-btn" onclick="deleteSection('${category.id}')">🗑️ حذف</button>` : ''}
+                                </div>
+                            </div>
+                            <div class="channels-list" id="channels-${category.id}"></div>
+                        `;
+                        sectionsList.appendChild(sectionDiv);
+
+                        const channelsInCategory = allChannels.filter(c => c.category === category.id);
+                        const channelsList = document.getElementById(`channels-${category.id}`);
+                        channelsList.innerHTML = channelsInCategory.length ? '' : '<p>لا توجد قنوات في هذا القسم</p>';
+
+                        channelsInCategory.forEach(data => {
+                            const channelDiv = document.createElement('div');
+                            channelDiv.className = 'channel';
+                            const servers = {
+                                url: data.url || '',
+                                hd: data.hd_url || '',
+                                sd: data.sd_url || '',
+                                low: data.low_url || '',
+                                backup1: data.backup1_url || '',
+                                backup2: data.backup2_url || ''
+                            };
+                            channelDiv.innerHTML = `
+                                <img src="${data.logo}" alt="${data.name}" loading="lazy" onerror="this.src='https://via.placeholder.com/50';">
+                                <span>${data.name}</span>
+                                <div>
+                                    <button class="watch-btn" onclick='playChannel(${JSON.stringify(servers)})'>▶ مشاهدة</button>
+                                    <button class="edit-btn" onclick='editChannel("${data.id}", "${data.category}", "${data.name}", "${data.logo}", "${data.url || ''}", "${data.hd_url || ''}", "${data.sd_url || ''}", "${data.low_url || ''}", "${data.backup1_url || ''}", "${data.backup2_url || ''}")'>✏️ تعديل</button>
+                                    <button class="delete-btn" onclick='deleteChannel("${data.id}")'>🗑️ حذف</button>
+                                </div>
+                            `;
+                            channelsList.appendChild(channelDiv);
+                        });
+                    });
+                }
+
+                const addSectionBtn = document.createElement('button');
+                addSectionBtn.className = 'add-section-btn';
+                addSectionBtn.textContent = '➕ إضافة قسم جديد';
+                addSectionBtn.onclick = openAddSectionModal;
+                sectionsList.appendChild(addSectionBtn);
+            } catch (err) {
+                console.error('Error loading categories:', err);
+                sectionsList.innerHTML = '<p class="error-message">خطأ في تحميل الأقسام. تحقق من اتصال Firebase أو وحدة التحكم.</p>';
+            }
+        }
+
+        async function playChannel(servers) {
+            console.log('Playing channel with servers:', servers);
+            await cleanupPlayers();
+            currentChannelServers = servers;
+
+            if (!isPlayerOpen) {
+                window.history.pushState({ playerOpen: true }, '', '#player');
+                isPlayerOpen = true;
+            }
+
+            playerContainer.style.display = 'block';
+
+            try {
+                if (playerContainer.requestFullscreen) {
+                    await playerContainer.requestFullscreen();
+                } else if (playerContainer.mozRequestFullScreen) {
+                    await playerContainer.mozRequestFullScreen();
+                } else if (playerContainer.webkitRequestFullscreen) {
+                    await playerContainer.webkitRequestFullscreen();
+                } else if (playerContainer.msRequestFullscreen) {
+                    await playerContainer.msRequestFullscreen();
+                }
+                console.log('Fullscreen requested');
+            } catch (err) {
+                console.error('Error requesting fullscreen:', err);
+            }
+
+            try {
+                if (screen.orientation && screen.orientation.lock) {
+                    await screen.orientation.lock('landscape');
+                    console.log('Screen orientation locked to landscape');
+                }
+            } catch (err) {
+                console.error('Error locking orientation:', err);
+            }
+
+            createServerButtons();
+            await tryNextServer();
+        }
+
+        function createServerButtons() {
+            const serverSelection = document.getElementById('serverSelection');
+            serverSelection.innerHTML = '';
+
+            const servers = [
+                { key: 'url', label: 'الأساسي' },
+                { key: 'hd', label: 'HD' },
+                { key: 'sd', label: 'SD' },
+                { key: 'low', label: 'Low' },
+                { key: 'backup1', label: 'الاحتياطي 1' },
+                { key: 'backup2', label: 'الاحتياطي 2' }
+            ];
+
+            servers.forEach(server => {
+                if (currentChannelServers[server.key]) {
+                    const button = document.createElement('button');
+                    button.className = 'server-btn';
+                    button.textContent = server.label;
+                    button.onclick = () => switchServer(server.key);
+                    if (server.key === currentServer) {
+                        button.classList.add('active');
+                    }
+                    serverSelection.appendChild(button);
+                }
+            });
+            console.log('Server buttons created');
+        }
+
+        async function tryNextServer() {
+            const servers = ['url', 'hd', 'sd', 'low', 'backup1', 'backup2'];
+            let serverIndex = servers.indexOf(currentServer);
+
+            for (let i = 0; i < servers.length; i++) {
+                const serverKey = servers[serverIndex];
+                const url = currentChannelServers[serverKey];
+                if (url && isValidUrl(url)) {
+                    console.log(`Trying server: ${serverKey} with URL: ${url}`);
+                    const success = await switchServer(serverKey);
+                    if (success) {
+                        currentServer = serverKey;
+                        console.log(`Server ${serverKey} loaded successfully`);
+                        return true;
+                    }
+                } else {
+                    console.log(`Skipping server ${serverKey}: Invalid or empty URL`);
+                }
+                serverIndex = (serverIndex + 1) % servers.length;
+            }
+
+            alert('عذرًا، لا توجد سيرفرات متاحة أو صالحة لهذه القناة.');
+            console.log('No valid servers available for this channel');
+            closePlayer();
+            return false;
+        }
+
+        async function switchServer(serverKey) {
+            const url = currentChannelServers[serverKey];
+            if (!url) {
+                console.log(`No URL for server: ${serverKey}`);
+                return false;
+            }
+
+            const buttons = document.querySelectorAll('.server-btn');
+            buttons.forEach(btn => {
+                btn.classList.remove('active');
+                if (btn.textContent === getServerLabel(serverKey)) {
+                    btn.classList.add('active');
+                }
+            });
+
+            try {
+                const timeoutPromise = new Promise((_, reject) => {
+                    setTimeout(() => reject(new Error('Server timeout')), 10000);
+                });
+
+                try {
+                    await fetch(url, { method: 'HEAD', mode: 'cors' });
+                    console.log(`URL ${url} is accessible`);
+                } catch (fetchErr) {
+                    console.warn(`URL ${url} may have CORS or accessibility issues:`, fetchErr);
+                }
+
+                if (url.endsWith('.mpd') && window.dashjs) {
+                    dashPlayer = dashjs.MediaPlayer().create();
+                    dashPlayer.initialize(videoElement, url, true);
+                    dashPlayer.setBufferTime(60);
+                    console.log(`DASH player initialized for ${url}`);
+                    await Promise.race([dashPlayer.play(), timeoutPromise]);
+                    return true;
+                } else if (url.endsWith('.flv') && flvjs.isSupported()) {
+                    flvPlayer = flvjs.createPlayer({
+                        type: 'flv',
+                        url,
+                        enableStashBuffer: true,
+                        stashInitialSize: 1024 * 1024
+                    });
+                    flvPlayer.attachMediaElement(videoElement);
+                    flvPlayer.load();
+                    await Promise.race([flvPlayer.play(), timeoutPromise]);
+                    console.log(`FLV player initialized for ${url}`);
+                    return true;
+                } else {
+                    player.source = {
+                        type: 'video',
+                        sources: [{ src: url, type: guessMimeType(url) }]
+                    };
+                    await Promise.race([player.play(), timeoutPromise]);
+                    console.log(`Plyr player initialized for ${url}`);
+                    return true;
+                }
+            } catch (err) {
+                console.error(`Error switching to server ${serverKey}:`, err);
+                return false;
+            }
+        }
+
+        async function cleanupPlayers() {
+            try {
+                if (player) player.stop();
+                if (dashPlayer) {
+                    dashPlayer.reset();
+                    dashPlayer = null;
+                }
+                if (flvPlayer) {
+                    flvPlayer.unload();
+                    flvPlayer.detachMediaElement();
+                    flvPlayer.destroy();
+                    flvPlayer = null;
+                }
+                videoElement.src = '';
+                videoElement.load();
+                document.getElementById('serverSelection').innerHTML = '';
+                await new Promise(resolve => setTimeout(resolve, 100));
+                console.log('Players cleaned up');
+            } catch (err) {
+                console.error('Error cleaning up players:', err);
+            }
+        }
+
+        function closePlayer() {
+            cleanupPlayers().then(() => {
+                playerContainer.style.display = 'none';
+                isPlayerOpen = false;
+
+                try {
+                    if (document.exitFullscreen) {
+                        document.exitFullscreen();
+                    } else if (document.mozCancelFullScreen) {
+                        document.mozCancelFullScreen();
+                    } else if (document.webkitExitFullscreen) {
+                        document.webkitExitFullscreen();
+                    } else if (document.msExitFullscreen) {
+                        document.msExitFullscreen();
+                    }
+                    console.log('Fullscreen exited');
+                } catch (err) {
+                    console.error('Error exiting fullscreen:', err);
+                }
+
+                try {
+                    if (screen.orientation && screen.orientation.unlock) {
+                        screen.orientation.unlock();
+                        console.log('Screen orientation unlocked');
+                    }
+                } catch (err) {
+                    console.error('Error unlocking orientation:', err);
+                }
+            });
+        }
+
+        function setupBackButtonHandler() {
+            window.addEventListener('popstate', (event) => {
+                if (isPlayerOpen) {
+                    console.log('Back button pressed, closing player');
+                    closePlayer();
+                }
+            });
+        }
+
+        function guessMimeType(url) {
+            if (url.endsWith('.mp4')) return 'video/mp4';
+            if (url.includes('.m3u8')) return 'application/x-mpegURL';
+            if (url.endsWith('.mpd')) return 'application/dash+xml';
+            if (url.endsWith('.flv')) return 'video/x-flv';
+            return 'video/mp4';
+        }
+
+        function getServerLabel(key) {
+            const labels = {
+                url: 'الأساسي',
+                hd: 'HD',
+                sd: 'SD',
+                low: 'Low',
+                backup1: 'الاحتياطي 1',
+                backup2: 'الاحتياطي 2'
+            };
+            return labels[key];
+        }
+
+        function isValidUrl(url) {
+            if (!url) return false;
+            try {
+                new URL(url);
+                return url.startsWith('http://') || url.startsWith('https://');
+            } catch {
+                return false;
+            }
+        }
+
+        function openAddSectionModal() {
+            currentCategoryId = null;
+            document.getElementById('sectionModalTitle').textContent = 'إضافة قسم';
+            document.getElementById('sectionName').value = '';
+            document.getElementById('sectionImage').value = '';
+            document.getElementById('sectionModal').style.display = 'block';
+            console.log('Add section modal opened');
+        }
+
+        function editSection(id, name, image) {
+            currentCategoryId = id;
+            document.getElementById('sectionModalTitle').textContent = 'تعديل قسم';
+            document.getElementById('sectionName').value = name;
+            document.getElementById('sectionImage').value = image;
+            document.getElementById('sectionModal').style.display = 'block';
+            console.log(`Edit section modal opened for category: ${id}`);
+        }
+
+        function closeSectionModal() {
+            document.getElementById('sectionModal').style.display = 'none';
+            console.log('Section modal closed');
+        }
+
+        async function saveSection() {
+            const name = document.getElementById('sectionName').value;
+            const image = document.getElementById('sectionImage').value || 'https://via.placeholder.com/150';
+
+            if (!name) {
+                alert('يرجى إدخال اسم القسم');
+                console.log('Section name is empty');
+                return;
+            }
+
+            try {
+                const sectionData = { name, image };
+                if (currentCategoryId) {
+                    console.log(`Updating category: ${currentCategoryId}`);
+                    await categoriesRef.child(currentCategoryId).update(sectionData);
+                } else {
+                    console.log('Creating new category');
+                    await categoriesRef.push(sectionData);
+                }
+                closeSectionModal();
+                loadCategories();
+            } catch (err) {
+                alert('خطأ في حفظ القسم');
+                console.error('Error saving section:', err);
+            }
+        }
+
+        async function deleteSection(id) {
+            if (id === 'channels') {
+                alert('لا يمكن حذف قسم القنوات الافتراضي');
+                console.log('Attempted to delete default channels category');
+                return;
+            }
+
+            if (!confirm('هل أنت متأكد من حذف هذا القسم؟ سيتم حذف جميع القنوات المرتبطة به.')) {
+                console.log('Section deletion cancelled');
+                return;
+            }
+
+            try {
+                console.log(`Deleting category: ${id}`);
+                const channelsInCategory = allChannels.filter(c => c.category === id);
+                for (const channel of channelsInCategory) {
+                    console.log(`Deleting channel: ${channel.id}`);
+                    await channelsRef.child(channel.id).remove();
+                }
+                await categoriesRef.child(id).remove();
+                loadCategories();
+            } catch (err) {
+                alert('خطأ في حذف القسم');
+                console.error('Error deleting section:', err);
+            }
+        }
+
+        function openAddChannelModal(categoryId) {
+            currentChannelId = null;
+            currentCategoryId = categoryId;
+            document.getElementById('channelModalTitle').textContent = 'إضافة قناة';
+            document.getElementById('channelCategory').innerHTML = '<option value="">اختر القسم</option>';
+            allCategories.forEach(cat => {
+                const option = document.createElement('option');
+                option.value = cat.id;
+                option.textContent = cat.name;
+                if (cat.id === categoryId) option.selected = true;
+                document.getElementById('channelCategory').appendChild(option);
+            });
+            document.getElementById('channelName').value = '';
+            document.getElementById('channelLogo').value = '';
+            document.getElementById('channelUrl').value = '';
+            document.getElementById('hdUrl').value = '';
+            document.getElementById('sdUrl').value = '';
+            document.getElementById('lowUrl').value = '';
+            document.getElementById('backup1Url').value = '';
+            document.getElementById('backup2Url').value = '';
+            document.getElementById('channelModal').style.display = 'block';
+            console.log(`Add channel modal opened for category: ${categoryId}`);
+        }
+
+        function editChannel(id, category, name, logo, url, hdUrl, sdUrl, lowUrl, backup1Url, backup2Url) {
+            currentChannelId = id;
+            document.getElementById('channelModalTitle').textContent = 'تعديل قناة';
+            document.getElementById('channelCategory').innerHTML = '<option value="">اختر القسم</option>';
+            allCategories.forEach(cat => {
+                const option = document.createElement('option');
+                option.value = cat.id;
+                option.textContent = cat.name;
+                if (cat.id === category) option.selected = true;
+                document.getElementById('channelCategory').appendChild(option);
+            });
+            document.getElementById('channelName').value = name;
+            document.getElementById('channelLogo').value = logo;
+            document.getElementById('channelUrl').value = url || '';
+            document.getElementById('hdUrl').value = hdUrl || '';
+            document.getElementById('sdUrl').value = sdUrl || '';
+            document.getElementById('lowUrl').value = lowUrl || '';
+            document.getElementById('backup1Url').value = backup1Url || '';
+            document.getElementById('backup2Url').value = backup2Url || '';
+            document.getElementById('channelModal').style.display = 'block';
+            console.log(`Edit channel modal opened for channel: ${id}`);
+        }
+
+        async function saveChannel() {
+            const category = document.getElementById('channelCategory').value;
+            const name = document.getElementById('channelName').value;
+            const logo = document.getElementById('channelLogo').value;
+            const url = document.getElementById('channelUrl').value;
+            const hdUrl = document.getElementById('hdUrl').value;
+            const sdUrl = document.getElementById('sdUrl').value;
+            const lowUrl = document.getElementById('lowUrl').value;
+            const backup1Url = document.getElementById('backup1Url').value;
+            const backup2Url = document.getElementById('backup2Url').value;
+
+            if (!category || !name || !logo || (!url && !hdUrl && !sdUrl && !lowUrl)) {
+                alert('يرجى ملء الحقول الأساسية (القسم، الاسم، الشعار، واحد على الأقل من السيرفرات)');
+                console.log('Channel save failed: Missing required fields');
+                return;
+            }
+
+            try {
+                const channelData = { category, name, logo };
+                if (url) channelData.url = url;
+                if (hdUrl) channelData.hd_url = hdUrl;
+                if (sdUrl) channelData.sd_url = sdUrl;
+                if (lowUrl) channelData.low_url = lowUrl;
+                if (backup1Url) channelData.backup1_url = backup1Url;
+                if (backup2Url) channelData.backup2_url = backup2Url;
+
+                if (currentChannelId) {
+                    console.log(`Updating channel: ${currentChannelId}`);
+                    await channelsRef.child(currentChannelId).update(channelData);
+                } else {
+                    console.log('Creating new channel');
+                    await channelsRef.push(channelData);
+                }
+                closeChannelModal();
+                loadCategories();
+            } catch (err) {
+                alert('خطأ في حفظ القناة');
+                console.error('Error saving channel:', err);
+            }
+        }
+
+        async function deleteChannel(id) {
+            if (!confirm('هل أنت متأكد من حذف هذه القناة؟')) {
+                console.log('Channel deletion cancelled');
+                return;
+            }
+
+            try {
+                console.log(`Deleting channel: ${id}`);
+                await channelsRef.child(id).remove();
+                loadCategories();
+            } catch (err) {
+                alert('خطأ في حذف القناة');
+                console.error('Error deleting channel:', err);
+            }
+        }
+
+        function closeChannelModal() {
+            document.getElementById('channelModal').style.display = 'none';
+            console.log('Channel modal closed');
+        }
+    </script>
+</body>
+</html>
