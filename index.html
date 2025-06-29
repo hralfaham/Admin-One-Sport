@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>لوحة تحكم One Sport Tv</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 10px;
+        }
+        .container {
+            max-width: 700px;
+            margin: auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+        }
+        h2 { text-align: center; margin-bottom: 15px; }
+        label { display: block; margin: 8px 0 4px; }
+        input[type=text], select {
+            width: 100%; padding: 8px; border-radius: 5px; border: 1px solid #ccc;
+        }
+        button {
+            margin-top: 12px;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 5px;
+            background-color: #28a745;
+            color: white;
+            cursor: pointer;
+            font-weight: bold;
+            width: 100%;
+        }
+        .sections-list, .channels-list {
+            margin-top: 25px;
+            max-height: 250px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            padding: 10px;
+            border-radius: 8px;
+            background: #fafafa;
+        }
+        .item {
+            padding: 6px 10px;
+            border-bottom: 1px solid #ddd;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .item:last-child {
+            border-bottom: none;
+        }
+        .btn-delete, .btn-edit {
+            background: #dc3545;
+            border: none;
+            color: white;
+            padding: 5px 8px;
+            margin-left: 5px;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+        .btn-edit {
+            background: #007bff;
+        }
+        .header-flex {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .header-flex button {
+            width: auto;
+            padding: 6px 12px;
+            background-color: #007bff;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>لوحة تحكم One Sport Tv</h2>
+
+        <div class="header-flex">
+            <h3>إدارة الأقسام</h3>
+            <button onclick="openAddSection()">+ إضافة قسم جديد</button>
+        </div>
+        <div class="sections-list" id="sectionsList">
+            جارٍ تحميل الأقسام...
+        </div>
+
+        <hr>
+
+        <div class="header-flex">
+            <h3>إدارة القنوات</h3>
+            <button onclick="openAddChannel()">+ إضافة قناة جديدة</button>
+        </div>
+        <div class="channels-list" id="channelsList">
+            جارٍ تحميل القنوات...
+        </div>
+
+        <!-- نماذج الإضافة والتعديل -->
+        <div id="modal" style="display:none; position: fixed; top:0; left:0; right:0; bottom:0; background: rgba(0,0,0,0.6);">
+            <div style="background:white; max-width: 400px; margin: 80px auto; padding: 20px; border-radius: 8px; position: relative;">
+                <h3 id="modalTitle"></h3>
+                <form id="modalForm">
+                    <input type="hidden" id="editId" />
+                    <label for="nameInput">الاسم:</label>
+                    <input type="text" id="nameInput" required />
+                    <label for="imageInput" id="labelImageInput">رابط الصورة:</label>
+                    <input type="text" id="imageInput" />
+                    <label for="categorySelect" id="labelCategorySelect" style="display:none;">القسم:</label>
+                    <select id="categorySelect" style="display:none;"></select>
+                    <label for="urlInput" id="labelUrlInput" style="display:none;">رابط البث:</label>
+                    <input type="text" id="urlInput" style="display:none;" />
+                    <div style="margin-top: 15px; text-align: center;">
+                        <button type="submit" style="background:#28a745; color:white; padding:8px 15px; border:none; border-radius:5px;">حفظ</button>
+                        <button type="button" onclick="closeModal()" style="background:#6c757d; color:white; padding:8px 15px; border:none; border-radius:5px; margin-left: 8px;">إلغاء</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <script>
+        const firebaseConfig = {
+          apiKey: "AIzaSyARzpeY20p5R1RXGYX_83zQkyLHywp-SE4",
+          authDomain: "one-sport-67e48.firebaseapp.com",
+          databaseURL: "https://one-sport-67e48-default-rtdb.asia-southeast1.firebasedatabase.app/",
+          projectId: "one-sport-67e48",
+          storageBucket: "one-sport-67e48.appspot.com",
+          messagingSenderId: "238395812570",
+          appId: "1:238395812570:web:6361f8ecac34d1061fd3e3"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+        const categoriesRef = db.ref('categories');
+        const channelsRef = db.ref('channels');
+
+        const sectionsList = document.getElementById('sectionsList');
+        const channelsList = document.getElementById('channelsList');
+        const modal = document.getElementById('modal');
+        const modalTitle = document.getElementById('modalTitle');
+        const modalForm = document.getElementById('modalForm');
+        const editId = document.getElementById('editId');
+        const nameInput = document.getElementById('nameInput');
+        const imageInput = document.getElementById('imageInput');
+        const categorySelect = document.getElementById('categorySelect');
+        const urlInput = document.getElementById('urlInput');
+        const labelImageInput = document.getElementById('labelImageInput');
+        const labelCategorySelect = document.getElementById('labelCategorySelect');
+        const labelUrlInput = document.getElementById('labelUrlInput');
+
+        let isEditingSection = false;
+
+        window.onload = () => {
+            loadSections();
+            loadChannels();
+        };
+
+        function loadSections() {
+            categoriesRef.on('value', (snapshot) => {
+                const categories = snapshot.val() || {};
+                renderSections(categories);
+            });
+        }
+
+        function loadChannels() {
+            channelsRef.on('value', (snapshot) => {
+                const channels = snapshot.val() || {};
+                renderChannels(channels);
+            });
+        }
+
+        function renderSections(categories) {
+            sectionsList.innerHTML = '';
+            const keys = Object.keys(categories).sort();
+            keys.forEach(key => {
+                const section = categories[key];
+                const div = document.createElement('div');
+                div.className = 'item';
+                div.innerHTML = `
+                    <span>${section.name}</span>
+                    <div>
+                        <button class="btn-edit" onclick="editSection('${key}', '${escapeHtml(section.name)}', '${escapeHtml(section.image || '')}')">تعديل</button>
+                        <button class="btn-delete" onclick="deleteSection('${key}')">حذف</button>
+                    </div>
+                `;
+                sectionsList.appendChild(div);
+            });
+        }
+
+        function renderChannels(channels) {
+            channelsList.innerHTML = '';
+            const keys = Object.keys(channels).sort();
+            keys.forEach(key => {
+                const channel = channels[key];
+                const div = document.createElement('div');
+                div.className = 'item';
+                div.innerHTML = `
+                    <span>${channel.name}</span>
+                    <div>
+                        <button class="btn-edit" onclick="editChannel('${key}', '${escapeHtml(channel.name)}', '${escapeHtml(channel.logo || '')}', '${escapeHtml(channel.category)}', '${escapeHtml(channel.url || '')}')">تعديل</button>
+                        <button class="btn-delete" onclick="deleteChannel('${key}')">حذف</button>
+                    </div>
+                `;
+                channelsList.appendChild(div);
+            });
+        }
+
+        function openAddSection() {
+            isEditingSection = true;
+            modalTitle.textContent = 'إضافة قسم جديد';
+            editId.value = '';
+            nameInput.value = '';
+            imageInput.value = '';
+            categorySelect.style.display = 'none';
+            labelCategorySelect.style.display = 'none';
+            urlInput.style.display = 'none';
+            labelUrlInput.style.display = 'none';
+            labelImageInput.style.display = 'block';
+            imageInput.style.display = 'block';
+            modal.style.display = 'block';
+        }
+
+        function openAddChannel() {
+            isEditingSection = false;
+            modalTitle.textContent = 'إضافة قناة جديدة';
+            editId.value = '';
+            nameInput.value = '';
+            imageInput.value = '';
+            urlInput.value = '';
+            // تحميل الأقسام للقائمة
+            categoriesRef.once('value').then(snapshot => {
+                const categories = snapshot.val() || {};
+                categorySelect.innerHTML = '';
+                Object.keys(categories).forEach(key => {
+                    const option = document.createElement('option');
+                    option.value = key;
+                    option.textContent = categories[key].name;
+                    categorySelect.appendChild(option);
+                });
+                categorySelect.style.display = 'block';
+                labelCategorySelect.style.display = 'block';
+                urlInput.style.display = 'block';
+                labelUrlInput.style.display = 'block';
+                labelImageInput.style.display = 'block';
+                imageInput.style.display = 'block';
+                modal.style.display = 'block';
+            });
+        }
+
+        modalForm.onsubmit = (e) => {
+            e.preventDefault();
+            const name = nameInput.value.trim();
+            const image = imageInput.value.trim();
+            const category = categorySelect.value;
+            const url = urlInput.value.trim();
+
+            if (!name) {
+                alert('يرجى إدخال الاسم.');
+                return;
+            }
+
+            if (isEditingSection) {
+                if (editId.value) {
+                    // تعديل قسم موجود
+                    categoriesRef.child(editId.value).set({
+                        name: name,
+                        image: image
+                    }).then(() => {
+                        closeModal();
+                    }).catch(err => alert('خطأ في تحديث القسم: ' + err));
+                } else {
+                    // إضافة قسم جديد بمفتاح عشوائي
+                    categoriesRef.push({
+                        name: name,
+                        image: image
+                    }).then(() => {
+                        closeModal();
+                    }).catch(err => alert('خطأ في إضافة القسم: ' + err));
+                }
+            } else {
+                if (editId.value) {
+                    // تعديل قناة موجودة
+                    channelsRef.child(editId.value).set({
+                        name: name,
+                        logo: image,
+                        category: category,
+                        url: url
+                    }).then(() => {
+                        closeModal();
+                    }).catch(err => alert('خطأ في تحديث القناة: ' + err));
+                } else {
+                    // إضافة قناة جديدة
+                    channelsRef.push({
+                        name: name,
+                        logo: image,
+                        category: category,
+                        url: url
+                    }).then(() => {
+                        closeModal();
+                    }).catch(err => alert('خطأ في إضافة القناة: ' + err));
+                }
+            }
+        };
+
+        function closeModal() {
+            modal.style.display = 'none';
+            editId.value = '';
+            nameInput.value = '';
+            imageInput.value = '';
+            urlInput.value = '';
+            categorySelect.style.display = 'none';
+            labelCategorySelect.style.display = 'none';
+            urlInput.style.display = 'none';
+            labelUrlInput.style.display = 'none';
+        }
+
+        function editSection(id, name, image) {
+            isEditingSection = true;
+            modalTitle.textContent = 'تعديل قسم';
+            editId.value = id;
+            nameInput.value = name;
+            imageInput.value = image;
+            categorySelect.style.display = 'none';
+            labelCategorySelect.style.display = 'none';
+            urlInput.style.display = 'none';
+            labelUrlInput.style.display = 'none';
+            labelImageInput.style.display = 'block';
+            imageInput.style.display = 'block';
+            modal.style.display = 'block';
+        }
+
+        function editChannel(id, name, logo, category, url) {
+            isEditingSection = false;
+            modalTitle.textContent = 'تعديل قناة';
+            editId.value = id;
+            nameInput.value = name;
+            imageInput.value = logo;
+            urlInput.value = url;
+            categoriesRef.once('value').then(snapshot => {
+                const categories = snapshot.val() || {};
+                categorySelect.innerHTML = '';
+                Object.keys(categories).forEach(key => {
+                    const option = document.createElement('option');
+                    option.value = key;
+                    option.textContent = categories[key].name;
+                    if (key === category) option.selected = true;
+                    categorySelect.appendChild(option);
+                });
+                categorySelect.style.display = 'block';
+                labelCategorySelect.style.display = 'block';
+                urlInput.style.display = 'block';
+                labelUrlInput.style.display = 'block';
+                labelImageInput.style.display = 'block';
+                imageInput.style.display = 'block';
+                modal.style.display = 'block';
+            });
+        }
+
+        function deleteSection(id) {
+            if (confirm('هل أنت متأكد من حذف هذا القسم؟ سيتم حذف جميع القنوات التابعة له!')) {
+                // حذف القسم والقنوات التابعة له
+                categoriesRef.child(id).remove().then(() => {
+                    // حذف القنوات التي تنتمي للقسم
+                    channelsRef.once('value').then(snapshot => {
+                        const channels = snapshot.val() || {};
+                        Object.keys(channels).forEach(key => {
+                            if (channels[key].category === id) {
+                                channelsRef.child(key).remove();
+                            }
+                        });
+                    });
+                });
+            }
+        }
+
+        function deleteChannel(id) {
+            if (confirm('هل أنت متأكد من حذف هذه القناة؟')) {
+                channelsRef.child(id).remove();
+            }
+        }
+
+        // دالة لتجنب مشاكل علامات التنصيص في جافاسكريبت
+        function escapeHtml(text) {
+            if (!text) return '';
+            return text.replace(/'/g, "\\'").replace(/"/g, '\\"');
+        }
+    </script>
+</body>
+</html>
