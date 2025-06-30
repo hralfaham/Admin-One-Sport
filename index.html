@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>لوحة تحكم One Sport Tv الجديدة</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f9f9f9;
+      margin: 0; padding: 15px;
+      direction: rtl;
+    }
+    .container {
+      max-width: 720px;
+      margin: auto;
+      background: #fff;
+      border-radius: 8px;
+      padding: 20px;
+      box-shadow: 0 0 12px rgba(0,0,0,0.1);
+    }
+    h2 {
+      text-align: center;
+      margin-bottom: 20px;
+      color: #333;
+    }
+    .section, .channel {
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      margin-bottom: 25px;
+      padding: 15px;
+      background: #fafafa;
+    }
+    label {
+      display: block;
+      margin: 12px 0 5px;
+      font-weight: bold;
+      color: #444;
+    }
+    input[type=text], select {
+      width: 100%;
+      padding: 8px;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+      box-sizing: border-box;
+    }
+    button {
+      background-color: #007bff;
+      color: white;
+      border: none;
+      padding: 10px 14px;
+      border-radius: 5px;
+      cursor: pointer;
+      margin-top: 12px;
+      width: 100%;
+      font-weight: bold;
+      transition: background-color 0.3s ease;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+    .list {
+      max-height: 280px;
+      overflow-y: auto;
+      margin-top: 15px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      background: #fff;
+      padding: 10px;
+    }
+    .item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid #eee;
+      padding: 8px 6px;
+      font-size: 14px;
+      color: #333;
+    }
+    .item:last-child {
+      border-bottom: none;
+    }
+    .actions button {
+      margin-left: 6px;
+      padding: 5px 9px;
+      font-size: 13px;
+      border-radius: 4px;
+    }
+    .edit-btn {
+      background-color: #28a745;
+    }
+    .delete-btn {
+      background-color: #dc3545;
+    }
+    /* مسافة بادئة للأقسام الفرعية */
+    .sub-item {
+      padding-right: 20px;
+      font-style: italic;
+      color: #555;
+    }
+    /* تنبيهات */
+    #alertBox {
+      display: none;
+      padding: 12px 15px;
+      margin-bottom: 20px;
+      border-radius: 5px;
+      font-weight: bold;
+      text-align: center;
+    }
+    #alertBox.success {
+      background-color: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
+    }
+    #alertBox.error {
+      background-color: #f8d7da;
+      color: #721c24;
+      border: 1px solid #f5c6cb;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <h2>لوحة تحكم One Sport Tv الجديدة</h2>
+
+    <div id="alertBox"></div>
+
+    <!-- إضافة قسم رئيسي -->
+    <div class="section" id="mainSectionForm">
+      <h3>إضافة قسم رئيسي</h3>
+      <form id="formAddMainSection">
+        <label for="mainSectionName">اسم القسم</label>
+        <input type="text" id="mainSectionName" placeholder="اسم القسم الرئيسي" required />
+        <label for="mainSectionImage">رابط صورة القسم</label>
+        <input type="text" id="mainSectionImage" placeholder="رابط صورة القسم" />
+        <button type="submit">إضافة قسم رئيسي</button>
+      </form>
+      <div class="list" id="mainSectionsList">جارٍ تحميل الأقسام الرئيسية...</div>
+    </div>
+
+    <!-- إضافة قسم فرعي -->
+    <div class="section" id="subSectionForm">
+      <h3>إضافة قسم فرعي</h3>
+      <form id="formAddSubSection">
+        <label for="subSectionName">اسم القسم الفرعي</label>
+        <input type="text" id="subSectionName" placeholder="اسم القسم الفرعي" required />
+        <label for="subSectionImage">رابط صورة القسم الفرعي</label>
+        <input type="text" id="subSectionImage" placeholder="رابط صورة القسم الفرعي" />
+        <label for="subSectionParent">اختر القسم الرئيسي</label>
+        <select id="subSectionParent" required>
+          <option value="">اختر القسم الرئيسي</option>
+        </select>
+        <button type="submit">إضافة قسم فرعي</button>
+      </form>
+      <div class="list" id="subSectionsList">جارٍ تحميل الأقسام الفرعية...</div>
+    </div>
+
+    <!-- إضافة قناة -->
+    <div class="section" id="channelForm">
+      <h3>إضافة قناة</h3>
+      <form id="formAddChannel">
+        <label for="channelName">اسم القناة</label>
+        <input type="text" id="channelName" placeholder="اسم القناة" required />
+        <label for="channelLogo">رابط صورة القناة</label>
+        <input type="text" id="channelLogo" placeholder="رابط صورة القناة" />
+        <label for="channelCategory">اختر القسم (رئيسي أو فرعي)</label>
+        <select id="channelCategory" required>
+          <option value="">اختر القسم</option>
+        </select>
+        <label for="channelUrlMain">رابط القناة الرئيسي</label>
+        <input type="text" id="channelUrlMain" placeholder="رابط البث الرئيسي" required />
+        <label for="channelUrlHD">رابط HD</label>
+        <input type="text" id="channelUrlHD" placeholder="رابط البث HD" />
+        <label for="channelUrlSD">رابط SD</label>
+        <input type="text" id="channelUrlSD" placeholder="رابط البث SD" />
+        <label for="channelUrlLow">رابط Low</label>
+        <input type="text" id="channelUrlLow" placeholder="رابط البث Low" />
+        <button type="submit">إضافة قناة</button>
+      </form>
+      <div class="list" id="channelsList">جارٍ تحميل القنوات...</div>
+    </div>
+  </div>
+
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+  <script>
+    // إعدادات Firebase (نفس إعداداتك الحالية)
+    const firebaseConfig = {
+      apiKey: "AIzaSyARzpeY20p5R1RXGYX_83zQkyLHywp-SE4",
+      authDomain: "one-sport-67e48.firebaseapp.com",
+      databaseURL: "https://one-sport-67e48-default-rtdb.asia-southeast1.firebasedatabase.app/",
+      projectId: "one-sport-67e48",
+      storageBucket: "one-sport-67e48.appspot.com",
+      messagingSenderId: "238395812570",
+      appId: "1:238395812570:web:6361f8ecac34d1061fd3e3"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    // المراجع
+    const categoriesRef = db.ref('categories');
+    const channelsRef = db.ref('channels');
+
+    // عناصر الـ DOM للنماذج والقوائم
+    const mainSectionsList = document.getElementById('mainSectionsList');
+    const subSectionsList = document.getElementById('subSectionsList');
+    const channelsList = document.getElementById('channelsList');
+
+    const subSectionParentSelect = document.getElementById('subSectionParent');
+    const channelCategorySelect = document.getElementById('channelCategory');
+
+    const alertBox = document.getElementById('alertBox');
+
+    // تنبيه
+    function showAlert(message, type = 'success') {
+      alertBox.textContent = message;
+      alertBox.className = '';
+      alertBox.classList.add(type === 'success' ? 'success' : 'error');
+      alertBox.style.display = 'block';
+      setTimeout(() => {
+        alertBox.style.display = 'none';
+      }, 3500);
+    }
+
+    // تحميل الأقسام الرئيسية والفرعية
+    function loadCategories() {
+      categoriesRef.once('value').then(snapshot => {
+        const categories = snapshot.val() || {};
+
+        // تصنيف الأقسام حسب نوعها
+        const mainSections = [];
+        const subSections = [];
+
+        Object.entries(categories).forEach(([key, cat]) => {
+          if (!cat.parent) {
+            mainSections.push({ id: key, ...cat });
+          } else {
+            subSections.push({ id: key, ...cat });
+          }
+        });
+
+        // عرض الأقسام الرئيسية في القائمة والاختيار
+        if (mainSections.length === 0) mainSectionsList.textContent = 'لا يوجد أقسام رئيسية';
+        else {
+          mainSectionsList.innerHTML = '';
+          mainSections.forEach(section => {
+            const div = document.createElement('div');
+            div.classList.add('item');
+            div.textContent = section.name;
+            // أزرار تعديل وحذف
+            div.innerHTML = `
+              <span>${section.name}</span>
+              <div class="actions">
+                <button class="edit-btn" onclick="editMainSection('${section.id}', '${escapeHtml(section.name)}', '${escapeHtml(section.image || '')}')">تعديل</button>
+                <button class="delete-btn" onclick="deleteMainSection('${section.id}')">حذف</button>
+              </div>
+            `;
+            mainSectionsList.appendChild(div);
+          });
+        }
+
+        // عرض الأقسام الفرعية في القائمة والاختيار
+        if (subSections.length === 0) subSectionsList.textContent = 'لا يوجد أقسام فرعية';
+        else {
+          subSectionsList.innerHTML = '';
+          subSections.forEach(section => {
+            const div = document.createElement('div');
+            div.classList.add('item', 'sub-item');
+            div.textContent = section.name;
+            // أزرار تعديل وحذف
+            div.innerHTML = `
+              <span>${section.name}</span>
+              <div class="actions">
+                <button class="edit-btn" onclick="editSubSection('${section.id}', '${escapeHtml(section.name)}', '${escapeHtml(section.image || '')}', '${section.parent}')">تعديل</button>
+                <button class="delete-btn" onclick="deleteSubSection('${section.id}')">حذف</button>
+              </div>
+            `;
+            subSectionsList.appendChild(div);
+          });
+        }
+
+        // تحديث خيارات اختيار القسم الأب في نموذج القسم الفرعي
+        subSectionParentSelect.innerHTML = '<option value="">اختر القسم الرئيسي</option>';
+        mainSections.forEach(section => {
+          const option = document.createElement('option');
+          option.value = section.id;
+          option.textContent = section.name;
+          subSectionParentSelect.appendChild(option);
+        });
+
+        // تحديث خيارات اختيار القسم للقنوات (رئيسي + فرعي)
+        channelCategorySelect.innerHTML = '<option value="">اختر القسم</option>';
+
+        // نعرض الأقسام الرئيسية أولًا، ثم الفرعية مع مسافة بادئة
+        mainSections.forEach(section => {
+          const optionMain = document.createElement('option');
+          optionMain.value = section.id;
+          optionMain.textContent = section.name;
+          channelCategorySelect.appendChild(optionMain);
+
+          // إضافة الأقسام الفرعية تحت القسم الرئيسي مع مسافة بادئة
+          subSections.filter(sub => sub.parent === section.id).forEach(sub => {
+            const optionSub = document.createElement('option');
+            optionSub.value = sub.id;
+            optionSub.textContent = '— ' + sub.name;
+            channelCategorySelect.appendChild(optionSub);
+          });
+        });
+
+      }).catch(err => {
+        showAlert('خطأ في تحميل الأقسام: ' + err, 'error');
+      });
+    }
+
+    // تحميل القنوات
+    function loadChannels() {
+      channelsRef.once('value').then(snapshot => {
+        const channels = snapshot.val() || {};
+        if (Object.keys(channels).length === 0) {
+          channelsList.textContent = 'لا توجد قنوات مضافة';
+          return;
+        }
+        channelsList.innerHTML = '';
+        Object.entries(channels).forEach(([key, channel]) => {
+          const div = document.createElement('div');
+          div.classList.add('item');
+          div.innerHTML = `
+            <span>${channel.name}</span>
+            <div class="actions">
+              <button class="edit-btn" onclick="editChannel('${key}', '${escapeHtml(channel.name)}', '${escapeHtml(channel.logo || '')}', '${channel.category}', '${escapeHtml(channel.urlMain || '')}', '${escapeHtml(channel.urlHD || '')}', '${escapeHtml(channel.urlSD || '')}', '${escapeHtml(channel.urlLow || '')}')">تعديل</button>
+              <button class="delete-btn" onclick="deleteChannel('${key}')">حذف</button>
+            </div>
+          `;
+          channelsList.appendChild(div);
+        });
+      }).catch(err => {
+        showAlert('خطأ في تحميل القنوات: ' + err, 'error');
+      });
+    }
+
+    // دوال إضافة الأقسام والقنوات
+
+    // قسم رئيسي
+    document.getElementById('formAddMainSection').onsubmit = e => {
+      e.preventDefault();
+      const name = document.getElementById('mainSectionName').value.trim();
+      const image = document.getElementById('mainSectionImage').value.trim();
+
+      if (!name) {
+        showAlert('الرجاء إدخال اسم القسم الرئيسي', 'error');
+        return;
+      }
+
+      categoriesRef.push({ name, image, parent: '' })
+        .then(() => {
+          showAlert('تم إضافة القسم الرئيسي بنجاح');
+          e.target.reset();
+          loadCategories();
+        })
+        .catch(err => showAlert('خطأ في إضافة القسم: ' + err, 'error'));
+    };
+
+    // قسم فرعي
+    document.getElementById('formAddSubSection').onsubmit = e => {
+      e.preventDefault();
+      const name = document.getElementById('subSectionName').value.trim();
+      const image = document.getElementById('subSectionImage').value.trim();
+      const parent = document.getElementById('subSectionParent').value;
+
+      if (!name || !parent) {
+        showAlert('الرجاء إدخال اسم القسم واختيار القسم الرئيسي', 'error');
+        return;
+      }
+
+      categoriesRef.push({ name, image, parent })
+        .then(() => {
+          showAlert('تم إضافة القسم الفرعي بنجاح');
+          e.target.reset();
+          loadCategories();
+        })
+        .catch(err => showAlert('خطأ في إضافة القسم الفرعي: ' + err, 'error'));
+    };
+
+    // قناة
+    document.getElementById('formAddChannel').onsubmit = e => {
+      e.preventDefault();
+      const name = document.getElementById('channelName').value.trim();
+      const logo = document.getElementById('channelLogo').value.trim();
+      const category = document.getElementById('channelCategory').value;
+      const urlMain = document.getElementById('channelUrlMain').value.trim();
+      const urlHD = document.getElementById('channelUrlHD').value.trim();
+      const urlSD = document.getElementById('channelUrlSD').value.trim();
+      const urlLow = document.getElementById('channelUrlLow').value.trim();
+
+      if (!name || !category || !urlMain) {
+        showAlert('الرجاء إدخال الاسم، القسم، والرابط الرئيسي', 'error');
+        return;
+      }
+
+      channelsRef.push({
+        name,
+        logo,
+        category,
+        urlMain,
+        urlHD,
+        urlSD,
+        urlLow
+      })
+      .then(() => {
+        showAlert('تم إضافة القناة بنجاح');
+        e.target.reset();
+        loadChannels();
+      })
+      .catch(err => showAlert('خطأ في إضافة القناة: ' + err, 'error'));
+    };
+
+    // دوال تعديل الأقسام والقنوات
+
+    // تعديل قسم رئيسي
+    function editMainSection(id, name, image) {
+      const newName = prompt('تعديل اسم القسم الرئيسي:', name);
+      if (newName === null) return; // إلغاء
+
+      const newImage = prompt('تعديل رابط صورة القسم:', image);
+      if (newImage === null) return; // إلغاء
+
+      if (newName.trim() === '') {
+        showAlert('اسم القسم لا يمكن أن يكون فارغاً', 'error');
+        return;
+      }
+
+      categoriesRef.child(id).update({ name: newName.trim(), image: newImage.trim() })
+        .then(() => {
+          showAlert('تم تحديث القسم الرئيسي بنجاح');
+          loadCategories();
+        })
+        .catch(err => showAlert('خطأ في تحديث القسم: ' + err, 'error'));
+    }
+
+    // تعديل قسم فرعي
+    function editSubSection(id, name, image, parent) {
+      const newName = prompt('تعديل اسم القسم الفرعي:', name);
+      if (newName === null) return; // إلغاء
+
+      const newImage = prompt('تعديل رابط صورة القسم:', image);
+      if (newImage === null) return; // إلغاء
+
+      const newParent = prompt('تعديل القسم الرئيسي (ضع معرف القسم أو اتركه كما هو):', parent);
+      if (newParent === null) return; // إلغاء
+
+      if (newName.trim() === '') {
+        showAlert('اسم القسم لا يمكن أن يكون فارغاً', 'error');
+        return;
+      }
+
+      // تأكد من وجود parent
+      const parentId = newParent.trim() || parent;
+
+      categoriesRef.child(id).update({ name: newName.trim(), image: newImage.trim(), parent: parentId })
+        .then(() => {
+          showAlert('تم تحديث القسم الفرعي بنجاح');
+          loadCategories();
+        })
+        .catch(err => showAlert('خطأ في تحديث القسم الفرعي: ' + err, 'error'));
+    }
+
+    // تعديل قناة
+    function editChannel(id, name, logo, category, urlMain, urlHD, urlSD, urlLow) {
+      const newName = prompt('تعديل اسم القناة:', name);
+      if (newName === null) return;
+
+      const newLogo = prompt('تعديل رابط صورة القناة:', logo);
+      if (newLogo === null) return;
+
+      // بناء قائمة اختيار القسم
+      loadCategories().then(() => {
+        const newCategory = prompt('تعديل القسم (ضع معرف القسم):', category);
+        if (newCategory === null) return;
+
+        const newUrlMain = prompt('تعديل رابط القناة الرئيسي:', urlMain);
+        if (newUrlMain === null) return;
+
+        const newUrlHD = prompt('تعديل رابط HD:', urlHD);
+        if (newUrlHD === null) return;
+
+        const newUrlSD = prompt('تعديل رابط SD:', urlSD);
+        if (newUrlSD === null) return;
+
+        const newUrlLow = prompt('تعديل رابط Low:', urlLow);
+        if (newUrlLow === null) return;
+
+        if (newName.trim() === '' || newCategory.trim() === '' || newUrlMain.trim() === '') {
+          showAlert('الاسم، القسم، والرابط الرئيسي لا يمكن أن تكون فارغة', 'error');
+          return;
+        }
+
+        channelsRef.child(id).update({
+          name: newName.trim(),
+          logo: newLogo.trim(),
+          category: newCategory.trim(),
+          urlMain: newUrlMain.trim(),
+          urlHD: newUrlHD.trim(),
+          urlSD: newUrlSD.trim(),
+          urlLow: newUrlLow.trim()
+        }).then(() => {
+          showAlert('تم تحديث القناة بنجاح');
+          loadChannels();
+        }).catch(err => showAlert('خطأ في تحديث القناة: ' + err, 'error'));
+      });
+    }
+
+    // دوال الحذف
+
+    function deleteMainSection(id) {
+      if (!confirm('هل أنت متأكد من حذف القسم الرئيسي؟ سيتم حذف جميع الأقسام الفرعية والقنوات التابعة له.')) return;
+      
+      // حذف القسم الرئيسي
+      categoriesRef.child(id).remove()
+      .then(() => {
+        // حذف الأقسام الفرعية التابعة له
+        categoriesRef.orderByChild('parent').equalTo(id).once('value').then(snapshot => {
+          const subs = snapshot.val() || {};
+          Object.keys(subs).forEach(subId => {
+            categoriesRef.child(subId).remove();
+          });
+        });
+        // حذف القنوات التابعة للقسم الرئيسي
+        channelsRef.orderByChild('category').equalTo(id).once('value').then(snapshot => {
+          const chans = snapshot.val() || {};
+          Object.keys(chans).forEach(chanId => {
+            channelsRef.child(chanId).remove();
+          });
+        });
+        // حذف القنوات التابعة للأقسام الفرعية التابعة للقسم الرئيسي
+        categoriesRef.orderByChild('parent').equalTo(id).once('value').then(snapshot => {
+          const subs = snapshot.val() || {};
+          Object.keys(subs).forEach(subId => {
+            channelsRef.orderByChild('category').equalTo(subId).once('value').then(snapshot2 => {
+              const chansSub = snapshot2.val() || {};
+              Object.keys(chansSub).forEach(chanSubId => {
+                channelsRef.child(chanSubId).remove();
+              });
+            });
+          });
+        });
+
+        showAlert('تم حذف القسم الرئيسي وكل ما يتعلق به');
+        loadCategories();
+        loadChannels();
+      })
+      .catch(err => showAlert('خطأ في حذف القسم الرئيسي: ' + err, 'error'));
+    }
+
+    function deleteSubSection(id) {
+      if (!confirm('هل أنت متأكد من حذف القسم الفرعي؟ سيتم حذف جميع القنوات التابعة له.')) return;
+
+      categoriesRef.child(id).remove()
+      .then(() => {
+        channelsRef.orderByChild('category').equalTo(id).once('value').then(snapshot => {
+          const chans = snapshot.val() || {};
+          Object.keys(chans).forEach(chanId => {
+            channelsRef.child(chanId).remove();
+          });
+        });
+        showAlert('تم حذف القسم الفرعي وكل القنوات التابعة له');
+        loadCategories();
+        loadChannels();
+      })
+      .catch(err => showAlert('خطأ في حذف القسم الفرعي: ' + err, 'error'));
+    }
+
+    function deleteChannel(id) {
+      if (!confirm('هل أنت متأكد من حذف القناة؟')) return;
+
+      channelsRef.child(id).remove()
+      .then(() => {
+        showAlert('تم حذف القناة بنجاح');
+        loadChannels();
+      })
+      .catch(err => showAlert('خطأ في حذف القناة: ' + err, 'error'));
+    }
+
+    // دالة لحماية علامات التنصيص عند الإرسال للـ prompt
+    function escapeHtml(text) {
+      if (!text) return '';
+      return text.replace(/'/g, "\\'").replace(/"/g, '\\"');
+    }
+
+    // تحميل الأقسام والقنوات عند بداية التحميل
+    loadCategories();
+    loadChannels();
+  </script>
+
+</body>
+</html>
