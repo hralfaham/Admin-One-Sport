@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>لوحة التحكم المتكاملة</title>
+<style>
+  body { font-family: 'Cairo', sans-serif; padding: 15px; background: #f9f9f9; }
+  h2 { margin-top: 30px; }
+  .form-group { margin-bottom: 15px; }
+  label { display: block; margin-bottom: 5px; font-weight: bold; }
+  input[type="text"], select {
+    width: 100%; padding: 8px; border-radius: 5px; border: 1px solid #ccc;
+    box-sizing: border-box;
+  }
+  button {
+    padding: 8px 15px; background: #6200ee; color: #fff; border: none;
+    border-radius: 5px; cursor: pointer; margin-top: 5px;
+  }
+  button:hover { background: #4500b5; }
+  button.delete { background: #e74c3c; margin-left: 10px; }
+  button.delete:hover { background: #b53025; }
+  .message { margin-top: 10px; color: green; }
+  .items-list {
+    margin-top: 15px; border: 1px solid #ccc; border-radius: 5px; background: white;
+    max-height: 250px; overflow-y: auto; padding: 10px;
+  }
+  .item {
+    border-bottom: 1px solid #ddd; padding: 10px 0;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .item:last-child { border-bottom: none; }
+  .item div { flex: 1; }
+  .extra-link-group {
+    margin-bottom: 10px;
+    display: flex; gap: 5px; align-items: center;
+  }
+  .extra-link-group input[type=text] {
+    width: 45%;
+  }
+  .extra-link-group button {
+    background: #e74c3c; padding: 5px 10px; margin: 0;
+  }
+</style>
+</head>
+<body>
+
+<h2>إضافة / تعديل قسم</h2>
+<div class="form-group">
+  <label for="sectionName">اسم القسم</label>
+  <input type="text" id="sectionName" placeholder="مثال: قنوات رياضية" />
+</div>
+<div class="form-group">
+  <label for="sectionImageUrl">رابط صورة القسم</label>
+  <input type="text" id="sectionImageUrl" placeholder="ضع رابط صورة القسم هنا" />
+</div>
+<div class="form-group">
+  <label for="sectionParent">القسم الأب (اختياري)</label>
+  <select id="sectionParent">
+    <option value="">قسم رئيسي</option>
+  </select>
+</div>
+<button id="sectionSaveBtn" onclick="saveSection()">إضافة القسم</button>
+<div class="message" id="sectionMsg"></div>
+
+<div class="items-list" id="sectionsList"></div>
+
+<hr />
+
+<h2>إضافة / تعديل قناة</h2>
+<div class="form-group">
+  <label for="channelName">اسم القناة</label>
+  <input type="text" id="channelName" placeholder="مثال: قناة الرياضية" />
+</div>
+<div class="form-group">
+  <label for="channelLogoUrl">رابط شعار القناة</label>
+  <input type="text" id="channelLogoUrl" placeholder="ضع رابط شعار القناة هنا" />
+</div>
+<div class="form-group">
+  <label for="channelCategory">القسم</label>
+  <select id="channelCategory"></select>
+</div>
+
+<div class="form-group">
+  <label for="urlMain">الرابط الرئيسي (Main)</label>
+  <input type="text" id="urlMain" placeholder="رابط البث الرئيسي" />
+</div>
+<div class="form-group">
+  <label for="urlHD">رابط جودة HD</label>
+  <input type="text" id="urlHD" placeholder="رابط جودة HD" />
+</div>
+<div class="form-group">
+  <label for="urlSD">رابط جودة SD</label>
+  <input type="text" id="urlSD" placeholder="رابط جودة SD" />
+</div>
+<div class="form-group">
+  <label for="urlLow">رابط جودة Low</label>
+  <input type="text" id="urlLow" placeholder="رابط جودة Low" />
+</div>
+
+<div id="extraLinksContainer"></div>
+<button onclick="addExtraLinkField()" type="button">+ أضف رابط بث إضافي</button>
+
+<br />
+<button id="channelSaveBtn" onclick="saveChannel()">إضافة القناة</button>
+<div class="message" id="channelMsg"></div>
+
+<div class="items-list" id="channelsList"></div>
+
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyARzpeY20p5R1RXGYX_83zQkyLHywp-SE4",
+    authDomain: "one-sport-67e48.firebaseapp.com",
+    databaseURL: "https://one-sport-67e48-default-rtdb.asia-southeast1.firebasedatabase.app/",
+    projectId: "one-sport-67e48",
+    storageBucket: "one-sport-67e48.appspot.com",
+    messagingSenderId: "238395812570",
+    appId: "1:238395812570:web:6361f8ecac34d1061fd3e3"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
+
+  // متغيرات للتحكم في حالة التعديل (معرفات العنصر الجاري تعديله)
+  let editingSectionId = null;
+  let editingChannelId = null;
+  let extraLinksCount = 0;
+
+  // تحميل الأقسام وتعبئة القوائم وعرضها
+  async function loadSections() {
+    const snapshot = await db.ref('categories').once('value');
+    const categories = snapshot.val() || {};
+
+    // تعبئة select للقسم الأب
+    const sectionParent = document.getElementById('sectionParent');
+    sectionParent.innerHTML = '<option value="">قسم رئيسي</option>';
+
+    // تعبئة select لقسم القناة
+    const channelCategory = document.getElementById('channelCategory');
+    channelCategory.innerHTML = '';
+
+    // عرض قائمة الأقسام
+    const sectionsList = document.getElementById('sectionsList');
+    sectionsList.innerHTML = '';
+
+    Object.entries(categories).forEach(([key, cat]) => {
+      // تعبئة selectات
+      if (!cat.parent || cat.parent === '') {
+        const optParent = document.createElement('option');
+        optParent.value = key;
+        optParent.textContent = cat.name;
+        sectionParent.appendChild(optParent);
+      }
+      const optChannel = document.createElement('option');
+      optChannel.value = key;
+      optChannel.textContent = cat.name;
+      channelCategory.appendChild(optChannel);
+
+      // عرض القسم مع أزرار تعديل وحذف
+      const div = document.createElement('div');
+      div.className = 'item';
+      div.innerHTML = `
+        <div>${cat.name} ${cat.parent ? `(فرعي من: ${categories[cat.parent]?.name || 'غير معروف'})` : '(رئيسي)'}</div>
+        <div>
+          <button onclick="editSection('${key}')">تعديل</button>
+          <button class="delete" onclick="deleteSection('${key}')">حذف</button>
+        </div>
+      `;
+      sectionsList.appendChild(div);
+    });
+  }
+
+  // حفظ أو تحديث القسم
+  function saveSection() {
+    const name = document.getElementById('sectionName').value.trim();
+    const image = document.getElementById('sectionImageUrl').value.trim();
+    const parent = document.getElementById('sectionParent').value;
+
+    if (!name) {
+      alert('يرجى إدخال اسم القسم');
+      return;
+    }
+    if (!image) {
+      alert('يرجى إدخال رابط صورة القسم');
+      return;
+    }
+
+    const sectionData = { name, image, parent: parent || '' };
+
+    if (editingSectionId) {
+      // تحديث القسم
+      db.ref('categories/' + editingSectionId).update(sectionData)
+        .then(() => {
+          resetSectionForm();
+          loadSections();
+          alert('تم تحديث القسم بنجاح');
+        }).catch(err => alert('خطأ في التحديث: ' + err.message));
+    } else {
+      // إضافة جديد
+      db.ref('categories').push(sectionData)
+        .then(() => {
+          resetSectionForm();
+          loadSections();
+          alert('تم إضافة القسم بنجاح');
+        }).catch(err => alert('خطأ في الإضافة: ' + err.message));
+    }
+  }
+
+  // تهيئة نموذج القسم (مسح الحقول)
+  function resetSectionForm() {
+    editingSectionId = null;
+    document.getElementById('sectionName').value = '';
+    document.getElementById('sectionImageUrl').value = '';
+    document.getElementById('sectionParent').value = '';
+    document.getElementById('sectionSaveBtn').textContent = 'إضافة القسم';
+  }
+
+  // تعبئة نموذج القسم للتعديل
+  async function editSection(id) {
+    const snapshot = await db.ref('categories/' + id).once('value');
+    const cat = snapshot.val();
+    if (!cat) {
+      alert('القسم غير موجود');
+      return;
+    }
+    editingSectionId = id;
+    document.getElementById('sectionName').value = cat.name || '';
+    document.getElementById('sectionImageUrl').value = cat.image || '';
+    document.getElementById('sectionParent').value = cat.parent || '';
+    document.getElementById('sectionSaveBtn').textContent = 'تحديث القسم';
+  }
+
+  // حذف قسم
+  function deleteSection(id) {
+    if (!confirm('هل أنت متأكد من حذف هذا القسم؟ سيتم حذف القنوات التابعة له أيضًا.')) return;
+
+    // حذف القسم وكل القنوات التي تنتمي له
+    db.ref('categories/' + id).remove()
+      .then(() => {
+        // حذف القنوات التابعة للقسم
+        db.ref('channels').orderByChild('category').equalTo(id).once('value', snapshot => {
+          const channels = snapshot.val();
+          if (channels) {
+            Object.keys(channels).forEach(chId => {
+              db.ref('channels/' + chId).remove();
+            });
+          }
+          loadSections();
+          loadChannelsList();
+          alert('تم حذف القسم والقنوات التابعة له');
+        });
+      }).catch(err => alert('خطأ في الحذف: ' + err.message));
+  }
+
+  // ====================== إدارة القنوات ==========================
+
+  // تحميل القنوات وعرضها في القائمة
+  async function loadChannelsList() {
+    const snapshot = await db.ref('channels').once('value');
+    const channels = snapshot.val() || {};
+    const channelsList = document.getElementById('channelsList');
+    channelsList.innerHTML = '';
+
+    Object.entries(channels).forEach(([key, ch]) => {
+      const div = document.createElement('div');
+      div.className = 'item';
+      div.innerHTML = `
+        <div>${ch.name} (القسم: ${ch.category})</div>
+        <div>
+          <button onclick="editChannel('${key}')">تعديل</button>
+          <button class="delete" onclick="deleteChannel('${key}')">حذف</button>
+        </div>
+      `;
+      channelsList.appendChild(div);
+    });
+  }
+
+  // حفظ أو تحديث القناة
+  function saveChannel() {
+    const name = document.getElementById('channelName').value.trim();
+    const logo = document.getElementById('channelLogoUrl').value.trim();
+    const category = document.getElementById('channelCategory').value;
+    const urlMain = document.getElementById('urlMain').value.trim();
+    const urlHD = document.getElementById('urlHD').value.trim();
+    const urlSD = document.getElementById('urlSD').value.trim();
+    const urlLow = document.getElementById('urlLow').value.trim();
+
+    if (!name) {
+      alert('يرجى إدخال اسم القناة');
+      return;
+    }
+    if (!logo) {
+      alert('يرجى إدخال رابط شعار القناة');
+      return;
+    }
+    if (!category) {
+      alert('يرجى اختيار القسم');
+      return;
+    }
+
+    // جمع الروابط الإضافية
+    const extraLinks = {};
+    for(let i=1; i<=extraLinksCount; i++) {
+      const linkNameInput = document.getElementById(`extraLinkName${i}`);
+      const linkUrlInput = document.getElementById(`extraLinkUrl${i}`);
+      if(linkNameInput && linkUrlInput) {
+        const n = linkNameInput.value.trim();
+        const u = linkUrlInput.value.trim();
+        if(n && u) extraLinks[n] = u;
+      }
+    }
+
+    const channelData = {
+      name, logo, category,
+      urlMain: urlMain || '',
+      urlHD: urlHD || '',
+      urlSD: urlSD || '',
+      urlLow: urlLow || '',
+      extraLinks
+    };
+
+    if (editingChannelId) {
+      db.ref('channels/' + editingChannelId).update(channelData)
+        .then(() => {
+          resetChannelForm();
+          loadChannelsList();
+          alert('تم تحديث القناة بنجاح');
+        }).catch(err => alert('خطأ في التحديث: ' + err.message));
+    } else {
+      db.ref('channels').push(channelData)
+        .then(() => {
+          resetChannelForm();
+          loadChannelsList();
+          alert('تم إضافة القناة بنجاح');
+        }).catch(err => alert('خطأ في الإضافة: ' + err.message));
+    }
+  }
+
+  // تهيئة نموذج القناة (مسح الحقول)
+  function resetChannelForm() {
+    editingChannelId = null;
+    document.getElementById('channelName').value = '';
+    document.getElementById('channelLogoUrl').value = '';
+    document.getElementById('channelCategory').value = '';
+    document.getElementById('urlMain').value = '';
+    document.getElementById('urlHD').value = '';
+    document.getElementById('urlSD').value = '';
+    document.getElementById('urlLow').value = '';
+    document.getElementById('extraLinksContainer').innerHTML = '';
+    extraLinksCount = 0;
+    document.getElementById('channelSaveBtn').textContent = 'إضافة القناة';
+  }
+
+  // تعبئة نموذج القناة للتعديل
+  async function editChannel(id) {
+    const snapshot = await db.ref('channels/' + id).once('value');
+    const ch = snapshot.val();
+    if (!ch) {
+      alert('القناة غير موجودة');
+      return;
+    }
+    editingChannelId = id;
+    document.getElementById('channelName').value = ch.name || '';
+    document.getElementById('channelLogoUrl').value = ch.logo || '';
+    document.getElementById('channelCategory').value = ch.category || '';
+    document.getElementById('urlMain').value = ch.urlMain || '';
+    document.getElementById('urlHD').value = ch.urlHD || '';
+    document.getElementById('urlSD').value = ch.urlSD || '';
+    document.getElementById('urlLow').value = ch.urlLow || '';
+
+    // عرض الروابط الإضافية
+    document.getElementById('extraLinksContainer').innerHTML = '';
+    extraLinksCount = 0;
+    if (ch.extraLinks) {
+      for (const [name, url] of Object.entries(ch.extraLinks)) {
+        addExtraLinkField(name, url);
+      }
+    }
+    document.getElementById('channelSaveBtn').textContent = 'تحديث القناة';
+  }
+
+  // حذف قناة
+  function deleteChannel(id) {
+    if (!confirm('هل أنت متأكد من حذف هذه القناة؟')) return;
+    db.ref('channels/' + id).remove()
+      .then(() => {
+        loadChannelsList();
+        alert('تم حذف القناة');
+      }).catch(err => alert('خطأ في الحذف: ' + err.message));
+  }
+
+  // إضافة حقل رابط بث إضافي (يمكن تمرير الاسم والرابط لعرض موجود)
+  function addExtraLinkField(name = '', url = '') {
+    extraLinksCount++;
+    const container = document.getElementById('extraLinksContainer');
+    const div = document.createElement('div');
+    div.className = 'extra-link-group';
+    div.innerHTML = `
+      <input type="text" placeholder="اسم الرابط (مثلاً: رابط 1)" id="extraLinkName${extraLinksCount}" value="${name}" />
+      <input type="text" placeholder="رابط البث" id="extraLinkUrl${extraLinksCount}" value="${url}" />
+      <button type="button" onclick="this.parentElement.remove()">✕</button>
+    `;
+    container.appendChild(div);
+  }
+
+  // بدء تحميل البيانات عند فتح الصفحة
+  window.onload = () => {
+    loadSections();
+    loadChannelsList();
+  };
+</script>
+
+</body>
+</html>
